@@ -1,0 +1,18 @@
+{
+  "name": "VisiScale",
+  "short_name": "VisiScale",
+  "description": "VisiScale field app — post jobs and get reviews",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#070c12",
+  "theme_color": "#070c12",
+  "orientation": "portrait",
+  "icons": [
+    {
+      "src": "/images/VisiScale-Badge-Logo.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
