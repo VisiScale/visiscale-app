@@ -15,8 +15,6 @@
   <link rel="icon" href="/images/VisiScale-Badge-Logo.svg" type="image/svg+xml">
   <link rel="apple-touch-icon" href="/images/VisiScale-Badge-Logo.svg">
 
-  <!-- QR code library -->
-  <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
 
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -662,7 +660,7 @@
     <div class="modal-handle"></div>
     <h2>Scan to Leave a Review</h2>
     <p>Have your client point their phone camera at this code</p>
-    <canvas id="qr-canvas"></canvas>
+    <img id="qr-img" width="220" height="220" style="border-radius:12px" alt="QR code for Google review">
     <button class="modal-close" onclick="closeQR()">Done</button>
   </div>
 </div>
@@ -770,16 +768,10 @@ function resetForm() {
 // ============================================================
 // QR CODE
 // ============================================================
-let qrDone = false;
-
 function openQR() {
-  if (!qrDone) {
-    QRCode.toCanvas(document.getElementById('qr-canvas'), CONFIG.reviewUrl, {
-      width:  220,
-      margin: 2,
-      color:  { dark: '#000000', light: '#ffffff' },
-    });
-    qrDone = true;
+  const img = document.getElementById('qr-img');
+  if (!img.src) {
+    img.src = 'https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=' + encodeURIComponent(CONFIG.reviewUrl);
   }
   document.getElementById('qr-modal').classList.add('open');
 }
