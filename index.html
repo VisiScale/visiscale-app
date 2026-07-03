@@ -130,6 +130,28 @@
     .field input[type="text"]:focus { border-color: var(--accent); }
     .field input[type="text"]::placeholder { color: var(--text-muted); }
 
+    .field select {
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 12px 14px;
+      color: var(--text);
+      font-size: 1rem;
+      width: 100%;
+      outline: none;
+      -webkit-appearance: none;
+      appearance: none;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='rgba(255,255,255,0.4)' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");
+      background-repeat: no-repeat;
+      background-position: right 12px center;
+      cursor: pointer;
+      transition: border-color var(--tr);
+    }
+
+    .field select:focus { border-color: var(--accent); }
+
+    .field select option { background: #0c1420; }
+
     /* ── PHOTO UPLOAD ── */
     .photo-zone {
       position: relative;
@@ -526,12 +548,20 @@
 
           <div class="field">
             <label for="service">Service Provided</label>
-            <input type="text" id="service" placeholder="e.g. Lawn Mowing" autocomplete="off" autocorrect="off">
+            <select id="service">
+              <option value="" disabled selected>Select a service</option>
+              <option value="Lawn Mowing">Lawn Mowing</option>
+              <option value="Hedge Trimming">Hedge Trimming</option>
+            </select>
           </div>
 
           <div class="field">
             <label for="location">Location</label>
-            <input type="text" id="location" placeholder="e.g. Essex, VT" autocomplete="off" autocorrect="off">
+            <select id="location">
+              <option value="" disabled selected>Select a location</option>
+              <option value="Williston, VT">Williston, VT</option>
+              <option value="Essex, VT">Essex, VT</option>
+            </select>
           </div>
 
           <div class="field">
