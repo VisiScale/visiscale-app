@@ -763,7 +763,7 @@ async function submitJob() {
   fd.append('Client First Name',                clientName);
   fd.append('Service Provided',                  service);
   fd.append('Location Service Was Provided',     location);
-  fd.append('Image Of Job',                      photo);
+  fd.append('Image_Of_Job',                      photo);
 
   try {
     await fetch(CONFIG.n8nFormUrl, { method: 'POST', body: fd });
