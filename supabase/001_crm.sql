@@ -7,6 +7,9 @@
 -- reading business B, so it is not optional on any table here.
 -- ============================================================
 
+-- Needed for gen_random_uuid(). Usually already on in Supabase, harmless if so.
+create extension if not exists pgcrypto;
+
 -- ---------- Tables ----------
 
 create table if not exists businesses (
@@ -103,3 +106,16 @@ end $$;
 drop trigger if exists customers_touch on customers;
 create trigger customers_touch before update on customers
   for each row execute function touch_updated_at();
+
+
+-- ---------- Let the app reach these tables ----------
+-- The project was created with "automatically expose new tables" off, which is
+-- the safe default. It also means nothing is readable by the app until it is
+-- granted here. RLS still decides WHICH rows; these grants only decide which
+-- tables are visible at all. Both have to be right.
+
+grant usage on schema public to anon, authenticated;
+
+grant select                         on businesses to authenticated;
+grant select                         on profiles   to authenticated;
+grant select, insert, update, delete on customers  to authenticated;
