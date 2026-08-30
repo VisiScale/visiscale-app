@@ -517,11 +517,60 @@
       font-weight: 600;
       cursor: pointer;
     }
-  </style>
+  
+    /* ---------- Login ---------- */
+    #login-screen{position:fixed;inset:0;z-index:200;display:flex;align-items:center;
+      justify-content:center;padding:1.5rem;background:var(--bg)}
+    #login-screen[hidden]{display:none}
+    .login-card{width:100%;max-width:22rem;background:var(--bg-card);
+      border:1px solid var(--border);border-radius:var(--radius);padding:1.75rem}
+    .login-logo{height:28px;display:block;margin:0 auto .5rem}
+    .login-sub{text-align:center;color:var(--text-muted);font-size:.875rem;margin:0 0 1.5rem}
+    .login-error{color:#ff6b6b;font-size:.8125rem;min-height:1.2em;margin:.25rem 0 .75rem}
+
+    /* ---------- Customers ---------- */
+    .opt{color:var(--text-muted);font-weight:400;font-size:.75rem}
+    .cust-list{display:flex;flex-direction:column;gap:.625rem;margin-top:1.25rem}
+    .cust-empty{color:var(--text-muted);font-size:.875rem;text-align:center;padding:1.5rem 0}
+    .cust-card{background:var(--bg-card);border:1px solid var(--border);
+      border-radius:var(--radius);padding:.875rem 1rem}
+    .cust-top{display:flex;align-items:center;justify-content:space-between;gap:.75rem}
+    .cust-top strong{font-size:.9375rem}
+    .cust-call{flex-shrink:0;font-size:.8125rem;font-weight:600;color:var(--accent-green);
+      text-decoration:none;padding:.25rem .625rem;border:1px solid var(--border);border-radius:999px}
+    .cust-line{color:var(--text-muted);font-size:.8125rem;margin:.25rem 0 0}
+    .cust-note{color:var(--text-muted);font-size:.8125rem;margin:.5rem 0 0;
+      padding-top:.5rem;border-top:1px solid var(--border)}
+</style>
 </head>
 
 <body>
-<div id="app">
+<script type="module">
+  // Supabase client. No bundler here, so it comes straight from the CDN.
+  import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+  window.sb = createClient(window.SUPABASE_URL, window.SUPABASE_ANON_KEY);
+  window.dispatchEvent(new Event('sb-ready'));
+</script>
+
+<!-- LOGIN. Shown until someone signs in; #app stays hidden behind it. -->
+<div id="login-screen">
+  <div class="login-card">
+    <img src="/images/VisiScale-Logo-White.svg" alt="VisiScale" class="login-logo">
+    <p class="login-sub">Sign in to your dashboard</p>
+    <div class="field">
+      <label for="login-email">Email</label>
+      <input type="email" id="login-email" autocomplete="username" placeholder="you@yourbusiness.com">
+    </div>
+    <div class="field">
+      <label for="login-password">Password</label>
+      <input type="password" id="login-password" autocomplete="current-password" placeholder="Your password">
+    </div>
+    <p id="login-error" class="login-error"></p>
+    <button class="btn-primary" id="login-btn" onclick="signIn()">Sign In</button>
+  </div>
+</div>
+
+<div id="app" hidden>
 
   <!-- Header -->
   <header class="app-header">
@@ -530,6 +579,40 @@
 
   <!-- Scrollable content area -->
   <div class="content">
+
+    <!-- CUSTOMERS TAB -->
+    <section id="tab-customers" class="tab-pane" role="tabpanel">
+      <div class="pane-head">
+        <h1>Customers</h1>
+        <p>Everyone you have worked for or quoted. Add them here and they are on every device you sign in to.</p>
+      </div>
+
+      <div class="form-card">
+        <div class="field">
+          <label for="cust-name">Name</label>
+          <input type="text" id="cust-name" placeholder="e.g. Sarah Miller" autocomplete="off">
+        </div>
+        <div class="field">
+          <label for="cust-phone">Phone</label>
+          <input type="tel" id="cust-phone" placeholder="(802) 555-0100" autocomplete="off">
+        </div>
+        <div class="field">
+          <label for="cust-email">Email <span class="opt">optional</span></label>
+          <input type="email" id="cust-email" placeholder="sarah@example.com" autocomplete="off">
+        </div>
+        <div class="field">
+          <label for="cust-address">Address <span class="opt">optional</span></label>
+          <input type="text" id="cust-address" placeholder="12 Maple St, Essex VT" autocomplete="off">
+        </div>
+        <div class="field">
+          <label for="cust-notes">Notes <span class="opt">optional</span></label>
+          <textarea id="cust-notes" rows="2" placeholder="Wants a quote for a 16x20 deck"></textarea>
+        </div>
+        <button class="btn-primary" id="cust-save-btn" onclick="addCustomer()">Add Customer</button>
+      </div>
+
+      <div id="cust-list" class="cust-list"></div>
+    </section>
 
     <!-- POST JOB TAB -->
     <section id="tab-post" class="tab-pane active" role="tabpanel">
@@ -666,6 +749,12 @@
 
   <!-- Bottom nav -->
   <nav class="bottom-nav" aria-label="Main navigation">
+    <button class="nav-btn" onclick="switchTab('customers', this)" aria-selected="false">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/>
+      </svg>
+      Customers
+    </button>
     <button class="nav-btn active" onclick="switchTab('post', this)" aria-selected="true">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
         <rect x="3" y="3" width="18" height="18" rx="2"/>
@@ -699,6 +788,12 @@
 // ============================================================
 // CONFIG — duplicate this file and update these values per client
 // ============================================================
+// Paste these two from Supabase: Project Settings > API.
+// Both are safe in client code. The anon key is public by design and Row Level
+// Security is what protects the data. Never put the service_role key here.
+window.SUPABASE_URL      = 'REPLACE_ME';
+window.SUPABASE_ANON_KEY = 'REPLACE_ME';
+
 const CONFIG = {
   n8nFormUrl:   'https://n8n.visiscale.com/webhook/742422d7-5e6c-4f81-b511-50c00fa7070f',
   reviewUrl:    'https://g.page/r/Ca7YuI2DPi88EBM/review',
@@ -821,6 +916,110 @@ function toggleTips(btn) {
 
 // Close QR on Escape key
 document.addEventListener('keydown', e => { if (e.key === 'Escape') closeQR(); });
+
+// ============================================================
+// AUTH
+// ============================================================
+let currentBusinessId = null;
+
+async function signIn() {
+  const btn = document.getElementById('login-btn');
+  const err = document.getElementById('login-error');
+  err.textContent = '';
+  btn.disabled = true; btn.textContent = 'Signing in...';
+  const { error } = await sb.auth.signInWithPassword({
+    email:    document.getElementById('login-email').value.trim(),
+    password: document.getElementById('login-password').value,
+  });
+  if (error) {
+    err.textContent = 'That email and password did not match. Try again.';
+    btn.disabled = false; btn.textContent = 'Sign In';
+    return;
+  }
+  await showApp();
+}
+
+async function signOut() {
+  await sb.auth.signOut();
+  location.reload();
+}
+
+async function showApp() {
+  // Which business this user belongs to. Every read and write is scoped to it,
+  // and RLS enforces that server-side regardless of what the app sends.
+  const { data: profile } = await sb.from('profiles').select('business_id, full_name').single();
+  if (!profile) {
+    document.getElementById('login-error').textContent =
+      'That login is not linked to a business yet. Run the add-a-client script.';
+    await sb.auth.signOut();
+    return;
+  }
+  currentBusinessId = profile.business_id;
+  document.getElementById('login-screen').hidden = true;
+  document.getElementById('app').hidden = false;
+  loadCustomers();
+}
+
+// ============================================================
+// CUSTOMERS
+// ============================================================
+async function loadCustomers() {
+  const wrap = document.getElementById('cust-list');
+  wrap.innerHTML = '<p class="cust-empty">Loading...</p>';
+  const { data, error } = await sb
+    .from('customers')
+    .select('id, name, phone, email, address, notes, created_at')
+    .order('created_at', { ascending: false });
+
+  if (error) { wrap.innerHTML = '<p class="cust-empty">Could not load customers.</p>'; return; }
+  if (!data.length) { wrap.innerHTML = '<p class="cust-empty">No customers yet. Add your first one above.</p>'; return; }
+
+  wrap.innerHTML = data.map(c => `
+    <div class="cust-card">
+      <div class="cust-top">
+        <strong>${esc(c.name)}</strong>
+        ${c.phone ? `<a class="cust-call" href="tel:${c.phone.replace(/\D/g,'')}">Call</a>` : ''}
+      </div>
+      ${c.phone   ? `<p class="cust-line">${esc(c.phone)}</p>`   : ''}
+      ${c.email   ? `<p class="cust-line">${esc(c.email)}</p>`   : ''}
+      ${c.address ? `<p class="cust-line">${esc(c.address)}</p>` : ''}
+      ${c.notes   ? `<p class="cust-note">${esc(c.notes)}</p>`   : ''}
+    </div>`).join('');
+}
+
+async function addCustomer() {
+  const btn  = document.getElementById('cust-save-btn');
+  const name = document.getElementById('cust-name').value.trim();
+  if (!name) { alert('A name is required.'); return; }
+
+  btn.disabled = true; btn.textContent = 'Saving...';
+  const { error } = await sb.from('customers').insert({
+    business_id: currentBusinessId,
+    name,
+    phone:   document.getElementById('cust-phone').value.trim()   || null,
+    email:   document.getElementById('cust-email').value.trim()   || null,
+    address: document.getElementById('cust-address').value.trim() || null,
+    notes:   document.getElementById('cust-notes').value.trim()   || null,
+  });
+  btn.disabled = false; btn.textContent = 'Add Customer';
+
+  if (error) { alert('Could not save. Check your connection and try again.'); return; }
+  ['cust-name','cust-phone','cust-email','cust-address','cust-notes']
+    .forEach(id => document.getElementById(id).value = '');
+  loadCustomers();
+}
+
+// Customer names are user input rendered into HTML, so escape them.
+function esc(str) {
+  return String(str).replace(/[&<>"']/g, ch =>
+    ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[ch]));
+}
+
+// Skip the login screen if the session is still valid.
+window.addEventListener('sb-ready', async () => {
+  const { data } = await sb.auth.getSession();
+  if (data.session) showApp();
+});
 </script>
 </body>
 </html>
