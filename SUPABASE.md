@@ -32,7 +32,36 @@ thing per block, nothing around it.
 
 ---
 
-## Rule 2: grants and RLS are two different locks
+## Rule 2: every new table gets RLS and a policy in the same migration
+
+Every client's data lives in the same tables, separated only by a `business_id`
+column. Gavin's customers and Chase's customers are neighbouring rows. **RLS is
+the only thing keeping them apart** — there is no separate database, schema or
+connection per client.
+
+So a table created without RLS is not "unfinished", it is **every client able to
+read every other client's data**. And the failure is silent: the app works, the
+data looks right to whoever is testing, and nobody notices until a client does.
+
+**In the same migration that creates a table, always:**
+
+```
+alter table <name> enable row level security;
+create policy ... using (business_id = auth_business_id());
+grant select, insert, update, delete on <name> to authenticated;
+```
+
+Never "add the policy after". There is no after.
+
+**Test it by logging in, not by reading the policy.** Sign in as one client, try
+to read another's row, and confirm you get nothing back. A policy that looks
+correct and a policy that is correct are different things, and the dashboard
+cannot tell you which you have — the SQL editor runs as a superuser and bypasses
+RLS entirely, so everything always looks fine from there.
+
+---
+
+## Rule 3: grants and RLS are two different locks
 
 The project was created with **"automatically expose new tables" off**, which is
 correct, and it means:
@@ -50,7 +79,7 @@ no policies returns zero rows to everyone.
 
 ---
 
-## Rule 3: keys
+## Rule 4: keys
 
 | Key | Safe in client code | Use |
 |---|---|---|
