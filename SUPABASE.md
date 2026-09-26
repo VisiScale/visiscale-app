@@ -93,6 +93,33 @@ tools, exposing every client's customer list.
 
 ---
 
+## Rule 5: two projects, and the app picks by hostname
+
+There are two Supabase projects with identical schemas:
+
+| | Project ID | Reached from |
+|---|---|---|
+| Production | `wjshwwivzpazczayuexc` | The deployed app |
+| Staging | `dtypvcpdpxbuczlecmli` | `localhost`, `127.0.0.1`, `file://` |
+
+`assets/app.js` decides between them from `location.hostname`, so nothing has to be
+remembered or flipped. A local edit cannot reach live client data, because the URL
+you opened is what chooses the database. Staging also renders a `STAGING` badge;
+production renders nothing, so an unbadged screen is always the real one.
+
+**Every migration runs on staging first.** That is the only reason the second project
+exists. Run it there, use the feature, then run the same file against production.
+
+**Staging must match production's creation settings** (see the table at the bottom),
+or it stops being a valid test. The two that matter: *automatically expose new tables*
+off, so a missing `grant` fails in both places rather than only in production, and
+*automatic RLS* on, so a new table is never wide open in one and locked in the other.
+
+Staging is disposable. It can be rebuilt from `001`, `003`, `002` in that order at
+any time, so it is also where to test anything destructive.
+
+---
+
 ## Architecture
 
 **One Supabase project holds every client.** Every row carries `business_id`, and RLS

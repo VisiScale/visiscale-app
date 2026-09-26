@@ -5,12 +5,37 @@
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 
-window.SUPABASE_URL      = 'https://wjshwwivzpazczayuexc.supabase.co';
-// Publishable key. Safe in the browser by design: it grants nothing on its own,
-// and RLS is what protects the data. Never put an sb_secret_ key in here.
-window.SUPABASE_ANON_KEY = 'sb_publishable_IiAkCfE_bNoYNqz6aVZcbA_qOnZoPVn';
+// Which database this talks to is decided by where the page is running, not by
+// a setting anyone can forget to flip. Opened from localhost or straight off
+// disk, it is staging. Anywhere else, it is production. That means a local edit
+// cannot reach live client data by accident.
+//
+// location.hostname is '' for file:// URLs, hence the empty string.
+const IS_STAGING = ['localhost', '127.0.0.1', ''].includes(location.hostname);
+
+window.SUPABASE_URL = IS_STAGING
+  ? 'https://dtypvcpdpxbuczlecmli.supabase.co'
+  : 'https://wjshwwivzpazczayuexc.supabase.co';
+
+// Publishable keys. Safe in the browser by design: they grant nothing on their
+// own, and RLS is what protects the data. Never put an sb_secret_ key in here.
+window.SUPABASE_ANON_KEY = IS_STAGING
+  ? 'sb_publishable_1dkMVKmU-frtH7Y3pekEiQ_bQDlWdM7'
+  : 'sb_publishable_IiAkCfE_bNoYNqz6aVZcbA_qOnZoPVn';
 
 window.sb = createClient(window.SUPABASE_URL, window.SUPABASE_ANON_KEY);
+
+// Staging gets a badge because the two environments are otherwise identical on
+// screen, and "which database am I looking at" should never be a guess.
+// Production renders nothing.
+if (IS_STAGING) {
+  document.addEventListener('DOMContentLoaded', () => {
+    const badge = document.createElement('div');
+    badge.className = 'env-badge';
+    badge.textContent = 'STAGING';
+    document.body.appendChild(badge);
+  });
+}
 
 // Customer names are user input rendered into HTML, so escape them.
 function esc(str) {

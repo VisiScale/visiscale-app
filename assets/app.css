@@ -607,3 +607,26 @@ html, body {
 .cust-line{color:var(--text-muted);font-size:.8125rem;margin:.25rem 0 0}
 .cust-note{color:var(--text-muted);font-size:.8125rem;margin:.5rem 0 0;
   padding-top:.5rem;border-top:1px solid var(--border)}
+
+/* ============================================================
+   STAGING BADGE
+   Only rendered when app.js decides it is talking to the staging
+   database. Sits above the bottom nav so it stays visible, and is
+   click-through so it can never swallow a tap.
+   ============================================================ */
+.env-badge {
+  position: fixed;
+  left: 50%;
+  transform: translateX(-50%);
+  bottom: calc(var(--nav-h) + var(--safe-bot) + 0.625rem);
+  z-index: 9999;
+  pointer-events: none;
+  padding: 0.25rem 0.75rem;
+  border-radius: 100px;
+  background: var(--accent);
+  color: #10151c;
+  font-size: 0.6875rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.4);
+}
