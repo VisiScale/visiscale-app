@@ -112,6 +112,7 @@ async function showApp() {
   document.getElementById('app').hidden = false;
 
   const { data: { session } } = await sb.auth.getSession();
+  window.currentUserId = session.user.id;
   if (typeof onSignedIn === 'function') await onSignedIn(profile, session.user.id);
 }
 
@@ -120,22 +121,29 @@ async function initChat(profile, userId) {
   chatState.isAdmin    = !!profile.is_admin;
   chatState.businessId = profile.business_id;
 
-  if (chatState.isAdmin) {
-    const { data: businesses } = await sb.from('businesses').select('id, name').order('name');
-    const picker = document.getElementById('chat-business');
-    picker.innerHTML = (businesses || [])
-      .map(b => `<option value="${esc(b.id)}">${esc(b.name)}</option>`).join('');
-    document.getElementById('chat-picker-wrap').hidden = false;
-    document.getElementById('chat-sub').textContent =
-      'Every client conversation. Pick one to read and reply.';
-    if (businesses && businesses.length) chatState.businessId = businesses[0].id;
-  }
+  // The agency dashboard renders its own conversation list and opens a thread
+  // when one is picked, so it must not land in whichever business sorted first.
+  // A client has exactly one thread, so it opens straight away.
+  if (chatState.isAdmin) return;
+
   await openThread(chatState.businessId);
+}
+
+// Records how far the signed-in person has read in a conversation. Upsert so
+// the first read creates the row and every one after it moves the marker.
+async function markRead(businessId) {
+  if (!businessId || !chatState.userId) return;
+  await sb.from('message_reads').upsert({
+    profile_id:   chatState.userId,
+    business_id:  businessId,
+    last_read_at: new Date().toISOString(),
+  }, { onConflict: 'profile_id,business_id' });
 }
 
 async function openThread(businessId) {
   if (!businessId) return;
   chatState.businessId = businessId;
+  window.currentThreadId = businessId;
   const thread = document.getElementById('chat-thread');
   thread.innerHTML = '<p class="cust-empty">Loading...</p>';
 
@@ -208,7 +216,7 @@ async function sendMessage(e) {
 // Expose for the inline onclick handlers in the markup.
 Object.assign(window, {
   esc, switchTab, signIn, signOut, showApp,
-  initChat, openThread, appendMessage, subscribeToThread, sendMessage,
+  initChat, openThread, appendMessage, subscribeToThread, sendMessage, markRead,
 });
 
 sb.auth.getSession().then(({ data }) => { if (data.session) showApp(); });

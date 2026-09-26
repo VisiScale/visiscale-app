@@ -630,3 +630,120 @@ html, body {
   letter-spacing: 0.1em;
   box-shadow: 0 2px 8px rgba(0,0,0,0.4);
 }
+
+/* ============================================================
+   CONVERSATION LIST (agency dashboard)
+   A row per client, newest first, with the unread marker on the
+   left where the eye lands first.
+   ============================================================ */
+.convo-list {
+  display: flex;
+  flex-direction: column;
+  margin-top: 1.25rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--bg-card);
+  overflow: hidden;
+}
+
+.convo {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  width: 100%;
+  padding: 0.875rem 1rem;
+  background: none;
+  border: none;
+  border-bottom: 1px solid var(--border);
+  color: var(--text);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: background var(--tr);
+}
+
+.convo:last-child { border-bottom: none; }
+.convo:hover      { background: rgba(255,255,255,0.04); }
+.convo:focus-visible {
+  outline: none;
+  box-shadow: inset 0 0 0 2px var(--accent);
+}
+
+/* Always occupies its space so names stay aligned whether read or not. */
+.convo-dot {
+  flex: 0 0 auto;
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: transparent;
+}
+
+.convo-unread .convo-dot { background: var(--accent-blue); }
+
+.convo-body { flex: 1; min-width: 0; }
+
+.convo-top {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.convo-name { font-size: 0.9375rem; font-weight: 500; }
+
+.convo-time {
+  flex: 0 0 auto;
+  font-size: 0.75rem;
+  color: var(--text-muted);
+}
+
+/* One line, clipped. The preview is a hint, not the message. */
+.convo-preview {
+  display: block;
+  margin-top: 0.1875rem;
+  font-size: 0.8125rem;
+  color: var(--text-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Weight carries the unread state as well as the dot, so it still reads
+   without relying on colour alone. */
+.convo-unread .convo-name    { font-weight: 700; }
+.convo-unread .convo-preview { color: var(--text); }
+
+/* ── OPEN CONVERSATION ── */
+.thread-head {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+}
+
+.thread-head h1 {
+  font-size: 1.375rem;
+  font-weight: 700;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.thread-back {
+  flex: 0 0 auto;
+  display: grid;
+  place-items: center;
+  width: 2rem;
+  height: 2rem;
+  margin-left: -0.375rem;
+  background: none;
+  border: none;
+  border-radius: 50%;
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: background var(--tr), color var(--tr);
+}
+
+.thread-back svg { width: 20px; height: 20px; }
+.thread-back:hover { background: rgba(255,255,255,0.06); color: var(--text); }

@@ -61,22 +61,33 @@
     </section>
 
     <section id="tab-chat" class="tab-pane" role="tabpanel">
-      <div class="pane-head">
-        <h1>Messages</h1>
-        <p id="chat-sub">Every client conversation. Pick one to read and reply.</p>
+
+      <!-- Conversation list -->
+      <div id="chat-list-view">
+        <div class="pane-head">
+          <h1>Messages</h1>
+          <p>Every client conversation, most recent first.</p>
+        </div>
+        <div id="convo-list" class="convo-list"><p class="cust-empty">Loading...</p></div>
       </div>
 
-      <div class="field" id="chat-picker-wrap" hidden>
-        <label for="chat-business">Conversation</label>
-        <select id="chat-business" onchange="openThread(this.value)"></select>
+      <!-- One conversation -->
+      <div id="chat-detail-view" hidden>
+        <div class="thread-head">
+          <button class="thread-back" onclick="closeConversation()" aria-label="Back to all conversations">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
+          </button>
+          <h1 id="thread-title">Conversation</h1>
+        </div>
+
+        <div id="chat-thread" class="chat-thread"><p class="cust-empty">Loading...</p></div>
+
+        <form class="chat-composer" onsubmit="sendMessage(event)">
+          <input id="chat-input" type="text" placeholder="Write a message" autocomplete="off" maxlength="2000">
+          <button class="btn-primary chat-send" type="submit" id="chat-send">Send</button>
+        </form>
       </div>
 
-      <div id="chat-thread" class="chat-thread"><p class="cust-empty">Loading...</p></div>
-
-      <form class="chat-composer" onsubmit="sendMessage(event)">
-        <input id="chat-input" type="text" placeholder="Write a message" autocomplete="off" maxlength="2000">
-        <button class="btn-primary chat-send" type="submit" id="chat-send">Send</button>
-      </form>
     </section>
 
   </div>
@@ -119,17 +130,112 @@ async function loadClients() {
     </div>`).join('');
 }
 
+// ============================================================
+// CONVERSATIONS
+// ============================================================
+let convos = [];
+
+// iMessage timestamps: today shows a clock, this week a weekday, older a date.
+function convoTime(iso) {
+  const d = new Date(iso), now = new Date();
+  if (d.toDateString() === now.toDateString())
+    return d.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+  if ((now - d) < 7 * 86400000)
+    return d.toLocaleDateString([], { weekday: 'short' });
+  return d.toLocaleDateString([], { month: 'numeric', day: 'numeric', year: '2-digit' });
+}
+
+async function loadConversations() {
+  const wrap = document.getElementById('convo-list');
+
+  // Three small reads in parallel. Pulling every message and grouping in the
+  // browser is fine at this size; if the list ever gets slow the fix is a
+  // view returning one row per business, not a bigger limit here.
+  const [biz, msgs, reads] = await Promise.all([
+    sb.from('businesses').select('id, name').order('name'),
+    sb.from('messages').select('business_id, body, sender_id, created_at')
+      .order('created_at', { ascending: false }).limit(500),
+    sb.from('message_reads').select('business_id, last_read_at'),
+  ]);
+
+  if (biz.error) { wrap.innerHTML = '<p class="cust-empty">Could not load conversations.</p>'; return; }
+
+  // Messages came back newest first, so the first one seen per business is its latest.
+  const latest = new Map();
+  for (const m of msgs.data || []) if (!latest.has(m.business_id)) latest.set(m.business_id, m);
+  const readAt = new Map((reads.data || []).map(r => [r.business_id, r.last_read_at]));
+
+  convos = (biz.data || []).map(b => {
+    const last = latest.get(b.id) || null;
+    const seen = readAt.get(b.id);
+    // Your own message is never unread, and a thread never read is unread on its first message.
+    const unread = !!last
+      && last.sender_id !== window.currentUserId
+      && (!seen || new Date(seen) < new Date(last.created_at));
+    return { id: b.id, name: b.name, last, unread };
+  }).sort((a, b) => {
+    if (!a.last && !b.last) return a.name.localeCompare(b.name);
+    if (!a.last) return 1;                       // silent threads sink to the bottom
+    if (!b.last) return -1;
+    return new Date(b.last.created_at) - new Date(a.last.created_at);
+  });
+
+  if (!convos.length) { wrap.innerHTML = '<p class="cust-empty">No clients yet.</p>'; return; }
+
+  wrap.innerHTML = convos.map(c => `
+    <button class="convo${c.unread ? ' convo-unread' : ''}" onclick="openConversation('${esc(c.id)}')"
+            aria-label="${esc(c.name)}${c.unread ? ', unread' : ''}">
+      <span class="convo-dot" aria-hidden="true"></span>
+      <span class="convo-body">
+        <span class="convo-top">
+          <span class="convo-name">${esc(c.name)}</span>
+          <span class="convo-time">${c.last ? esc(convoTime(c.last.created_at)) : ''}</span>
+        </span>
+        <span class="convo-preview">${c.last ? esc(c.last.body) : 'No messages yet'}</span>
+      </span>
+    </button>`).join('');
+}
+
+async function openConversation(businessId) {
+  const c = convos.find(x => x.id === businessId);
+  document.getElementById('thread-title').textContent = c ? c.name : 'Conversation';
+  document.getElementById('chat-list-view').hidden = true;
+  document.getElementById('chat-detail-view').hidden = false;
+  await openThread(businessId);
+  await markRead(businessId);
+}
+
+function closeConversation() {
+  document.getElementById('chat-detail-view').hidden = true;
+  document.getElementById('chat-list-view').hidden = false;
+  loadConversations();          // reflect anything read or sent while it was open
+}
+
 // Jump straight from a client row into their thread.
 function openClient(businessId) {
-  const picker = document.getElementById('chat-business');
-  if (picker) picker.value = businessId;
-  openThread(businessId);
   switchTab('chat', document.querySelectorAll('.nav-btn')[1]);
+  openConversation(businessId);
+}
+
+// openThread subscribes to the open conversation only. This second subscription
+// covers every other one, so a message arriving in a thread you are not looking
+// at still moves it to the top of the list and lights its dot.
+function watchAllThreads() {
+  sb.channel('admin-all-messages')
+    .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages' }, payload => {
+      const listOpen = !document.getElementById('chat-list-view').hidden;
+      if (listOpen) { loadConversations(); return; }
+      // A message landing in the thread already on screen has been read on arrival.
+      if (payload.new.business_id === window.currentThreadId) markRead(payload.new.business_id);
+    })
+    .subscribe();
 }
 
 async function onSignedIn(profile, userId) {
   loadClients();
   initChat(profile, userId);
+  await loadConversations();
+  watchAllThreads();
 }
 </script>
 
