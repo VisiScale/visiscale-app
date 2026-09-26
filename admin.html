@@ -1,0 +1,137 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>VisiScale Agency</title>
+
+  <!-- PWA / iOS standalone -->
+  <meta name="robots" content="noindex, nofollow">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black">
+  <meta name="apple-mobile-web-app-title" content="VisiScale">
+  <meta name="theme-color" content="#070c12">
+  <link rel="manifest" href="/manifest.json">
+  <link rel="icon" href="/images/app-icon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="/images/app-icon.svg">
+
+
+  <link rel="stylesheet" href="/assets/app.css">
+</head>
+
+<body>
+<script>
+  // Agency dashboard. showApp sends clients away from here and admins here.
+  window.IS_ADMIN_APP = true;
+</script>
+<script type="module" src="/assets/app.js"></script>
+
+<div id="login-screen">
+  <div class="login-card">
+    <img src="/images/VisiScale-Logo-White.svg" alt="VisiScale" class="login-logo">
+    <p class="login-sub">Sign in to your dashboard</p>
+    <div class="field">
+      <label for="login-email">Email</label>
+      <input type="email" id="login-email" autocomplete="username" placeholder="you@yourbusiness.com">
+    </div>
+    <div class="field">
+      <label for="login-password">Password</label>
+      <input type="password" id="login-password" autocomplete="current-password" placeholder="Your password">
+    </div>
+    <p id="login-error" class="login-error"></p>
+    <button class="btn-primary" id="login-btn" onclick="signIn()">Sign In</button>
+  </div>
+
+</div>
+
+<div id="app" hidden>
+
+  <header class="app-header">
+    <img src="/images/VisiScale-Logo-White.svg" alt="VisiScale">
+  </header>
+
+  <div class="content">
+
+    <section id="tab-clients" class="tab-pane active" role="tabpanel">
+      <div class="pane-head">
+        <h1>Clients</h1>
+        <p>Every business on the platform. Pick one to open its conversation.</p>
+      </div>
+      <div id="client-list" class="cust-list"><p class="cust-empty">Loading...</p></div>
+    </section>
+
+    <section id="tab-chat" class="tab-pane" role="tabpanel">
+      <div class="pane-head">
+        <h1>Messages</h1>
+        <p id="chat-sub">Every client conversation. Pick one to read and reply.</p>
+      </div>
+
+      <div class="field" id="chat-picker-wrap" hidden>
+        <label for="chat-business">Conversation</label>
+        <select id="chat-business" onchange="openThread(this.value)"></select>
+      </div>
+
+      <div id="chat-thread" class="chat-thread"><p class="cust-empty">Loading...</p></div>
+
+      <form class="chat-composer" onsubmit="sendMessage(event)">
+        <input id="chat-input" type="text" placeholder="Write a message" autocomplete="off" maxlength="2000">
+        <button class="btn-primary chat-send" type="submit" id="chat-send">Send</button>
+      </form>
+    </section>
+
+  </div>
+
+  <nav class="bottom-nav" aria-label="Main navigation">
+    <button class="nav-btn active" onclick="switchTab('clients', this)" aria-selected="true">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M3 21h18M5 21V7l7-4 7 4v14M9 21v-6h6v6"/>
+      </svg>
+      Clients
+    </button>
+    <button class="nav-btn" onclick="switchTab('chat', this)" aria-selected="false">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/>
+      </svg>
+      Messages
+    </button>
+  </nav>
+
+</div>
+
+<script>
+// Agency side. Clients are businesses; RLS lets an admin read them all.
+async function loadClients() {
+  const wrap = document.getElementById('client-list');
+  const { data, error } = await sb
+    .from('businesses')
+    .select('id, name, created_at')
+    .order('name');
+
+  if (error) { wrap.innerHTML = '<p class="cust-empty">Could not load clients.</p>'; return; }
+  if (!data.length) { wrap.innerHTML = '<p class="cust-empty">No clients yet.</p>'; return; }
+
+  wrap.innerHTML = data.map(b => `
+    <div class="cust-card" role="button" tabindex="0"
+         onclick="openClient('${esc(b.id)}')"
+         onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();openClient('${esc(b.id)}')}">
+      <div class="cust-top"><strong>${esc(b.name)}</strong></div>
+      <p class="cust-line">Client since ${new Date(b.created_at).toLocaleDateString()}</p>
+    </div>`).join('');
+}
+
+// Jump straight from a client row into their thread.
+function openClient(businessId) {
+  const picker = document.getElementById('chat-business');
+  if (picker) picker.value = businessId;
+  openThread(businessId);
+  switchTab('chat', document.querySelectorAll('.nav-btn')[1]);
+}
+
+async function onSignedIn(profile, userId) {
+  loadClients();
+  initChat(profile, userId);
+}
+</script>
+
+</body>
+</html>
