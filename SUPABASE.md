@@ -73,6 +73,13 @@ Both have to be right. Getting only the policies right produces tables that exis
 have correct policies, and fail every query on permissions. Every new table needs a
 matching `grant` line or the app cannot see it.
 
+**A new role means revisiting every existing policy, not just writing new ones.**
+`003` introduced admins and gave them an exemption on `messages`, but left the
+policies from `001` untouched, so admins could read every client's messages and
+none of their names. Nothing errored; the dashboard just showed one business.
+When a migration adds a role, grep the earlier migrations for `create policy` and
+decide about each one explicitly. Fixed in `005`.
+
 **"Enable automatic RLS" is on**, so new tables get RLS switched on automatically.
 That is a safety net, not a substitute for writing policies: a table with RLS on and
 no policies returns zero rows to everyone.
