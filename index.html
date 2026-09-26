@@ -16,541 +16,11 @@
   <link rel="apple-touch-icon" href="/images/app-icon.svg">
 
 
-  <style>
-    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-
-    :root {
-      --bg:           #070c12;
-      --bg-card:      #0c1420;
-      --accent:       #ffda22;
-      --accent-blue:  #4878ff;
-      --accent-green: #37aa52;
-      --text:         #ffffff;
-      --text-muted:   rgba(255,255,255,0.55);
-      --border:       rgba(255,255,255,0.09);
-      --radius:       12px;
-      --tr:           0.18s ease;
-      --nav-h:        66px;
-      --safe-top:     env(safe-area-inset-top, 0px);
-      --safe-bot:     env(safe-area-inset-bottom, 0px);
-    }
-
-    html, body {
-      height: 100%;
-      background: var(--bg);
-      color: var(--text);
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-      font-size: 16px;
-      line-height: 1.5;
-      -webkit-font-smoothing: antialiased;
-      overflow: hidden;
-    }
-
-    /* ── APP SHELL ── */
-    #app {
-      display: flex;
-      flex-direction: column;
-      height: 100dvh;
-      max-width: 480px;
-      margin: 0 auto;
-    }
-
-    /* ── HEADER ── */
-    .app-header {
-      flex-shrink: 0;
-      padding: calc(var(--safe-top) + 14px) 20px 14px;
-      background: var(--bg-card);
-      border-bottom: 1px solid var(--border);
-      display: flex;
-      align-items: center;
-    }
-
-    .app-header img {
-      height: 26px;
-      width: auto;
-    }
-
-    /* ── SCROLLABLE CONTENT ── */
-    .content {
-      flex: 1;
-      overflow-y: auto;
-      -webkit-overflow-scrolling: touch;
-    }
-
-    .tab-pane {
-      display: none;
-      padding: 24px 20px calc(var(--nav-h) + var(--safe-bot) + 28px);
-    }
-
-    .tab-pane.active { display: block; }
-
-    /* ── PAGE HEADING ── */
-    .pane-head { margin-bottom: 20px; }
-    .pane-head h1 { font-size: 1.375rem; font-weight: 700; margin-bottom: 4px; }
-    .pane-head p  { font-size: 0.875rem; color: var(--text-muted); line-height: 1.55; }
-
-    /* ── FORM CARD ── */
-    .form-card {
-      background: var(--bg-card);
-      border: 1px solid var(--border);
-      border-radius: var(--radius);
-      padding: 20px;
-      display: flex;
-      flex-direction: column;
-      gap: 16px;
-    }
-
-    .field {
-      display: flex;
-      flex-direction: column;
-      gap: 6px;
-    }
-
-    .field label {
-      font-size: 0.75rem;
-      font-weight: 600;
-      text-transform: uppercase;
-      letter-spacing: 0.06em;
-      color: var(--text-muted);
-    }
-
-    .field input[type="text"] {
-      background: var(--bg);
-      border: 1px solid var(--border);
-      border-radius: 8px;
-      padding: 12px 14px;
-      color: var(--text);
-      font-size: 1rem;
-      width: 100%;
-      outline: none;
-      -webkit-appearance: none;
-      transition: border-color var(--tr);
-    }
-
-    .field input[type="text"]:focus { border-color: var(--accent); }
-    .field input[type="text"]::placeholder { color: var(--text-muted); }
-
-    .field select {
-      background: var(--bg);
-      border: 1px solid var(--border);
-      border-radius: 8px;
-      padding: 12px 14px;
-      color: var(--text);
-      font-size: 1rem;
-      width: 100%;
-      outline: none;
-      -webkit-appearance: none;
-      appearance: none;
-      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='rgba(255,255,255,0.4)' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");
-      background-repeat: no-repeat;
-      background-position: right 12px center;
-      cursor: pointer;
-      transition: border-color var(--tr);
-    }
-
-    .field select:focus { border-color: var(--accent); }
-
-    .field select option { background: #0c1420; }
-
-    /* ── PHOTO UPLOAD ── */
-    .photo-zone {
-      position: relative;
-      border-radius: 8px;
-      overflow: hidden;
-    }
-
-    .photo-zone input[type="file"] {
-      position: absolute;
-      inset: 0;
-      opacity: 0;
-      cursor: pointer;
-      width: 100%;
-      height: 100%;
-      z-index: 2;
-    }
-
-    .photo-drop {
-      background: var(--bg);
-      border: 2px dashed var(--border);
-      border-radius: 8px;
-      padding: 30px 20px;
-      text-align: center;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      gap: 10px;
-      transition: border-color var(--tr);
-    }
-
-    .photo-zone:hover .photo-drop { border-color: var(--accent); }
-
-    .photo-drop svg { opacity: 0.45; }
-
-    .photo-drop span {
-      font-size: 0.875rem;
-      color: var(--text-muted);
-      pointer-events: none;
-    }
-
-    #photo-preview {
-      display: none;
-      width: 100%;
-      max-height: 220px;
-      object-fit: cover;
-      border-radius: 8px;
-    }
-
-    #photo-preview.visible { display: block; }
-
-    /* tap-to-retake hint shown over preview */
-    .photo-retake {
-      display: none;
-      position: absolute;
-      bottom: 8px;
-      right: 8px;
-      background: rgba(0,0,0,0.65);
-      color: #fff;
-      font-size: 0.75rem;
-      font-weight: 600;
-      padding: 5px 10px;
-      border-radius: 20px;
-      pointer-events: none;
-      z-index: 3;
-    }
-
-    #photo-preview.visible ~ .photo-retake { display: block; }
-
-    /* ── BUTTONS ── */
-    .btn-primary {
-      background: var(--accent);
-      color: #000;
-      border: none;
-      border-radius: 10px;
-      padding: 14px 20px;
-      font-size: 1rem;
-      font-weight: 700;
-      cursor: pointer;
-      width: 100%;
-      transition: opacity var(--tr), transform var(--tr);
-      -webkit-tap-highlight-color: transparent;
-    }
-
-    .btn-primary:active  { opacity: 0.82; transform: scale(0.98); }
-    .btn-primary:disabled { opacity: 0.45; cursor: not-allowed; transform: none; }
-
-    .btn-ghost {
-      background: transparent;
-      color: var(--text-muted);
-      border: 1px solid var(--border);
-      border-radius: 10px;
-      padding: 13px 20px;
-      font-size: 0.9375rem;
-      font-weight: 600;
-      cursor: pointer;
-      width: 100%;
-      transition: border-color var(--tr), color var(--tr);
-    }
-
-    .btn-ghost:active { border-color: var(--accent); color: var(--text); }
-
-    /* ── SUCCESS STATE ── */
-    #success-wrap {
-      display: none;
-      background: rgba(55,170,82,0.1);
-      border: 1px solid var(--accent-green);
-      border-radius: var(--radius);
-      padding: 28px 24px;
-      text-align: center;
-    }
-
-    #success-wrap.visible { display: block; }
-
-    .success-check {
-      width: 52px;
-      height: 52px;
-      background: var(--accent-green);
-      border-radius: 50%;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      margin: 0 auto 16px;
-    }
-
-    #success-wrap h2 { font-size: 1.125rem; font-weight: 700; margin-bottom: 8px; }
-
-    #success-wrap p {
-      color: var(--text-muted);
-      font-size: 0.875rem;
-      margin-bottom: 22px;
-    }
-
-    /* ── REVIEW ACTION BUTTONS ── */
-    .actions { display: flex; flex-direction: column; gap: 12px; margin-bottom: 28px; }
-
-    .action-btn {
-      display: flex;
-      align-items: center;
-      gap: 14px;
-      padding: 18px 20px;
-      border-radius: var(--radius);
-      font-size: 1rem;
-      font-weight: 600;
-      text-decoration: none;
-      border: none;
-      cursor: pointer;
-      width: 100%;
-      color: inherit;
-      transition: opacity var(--tr), transform var(--tr);
-      -webkit-tap-highlight-color: transparent;
-    }
-
-    .action-btn:active { opacity: 0.84; transform: scale(0.98); }
-
-    .action-btn svg { width: 22px; height: 22px; flex-shrink: 0; }
-
-    .action-btn--green  { background: var(--accent-green);  color: #fff; }
-    .action-btn--blue   { background: var(--accent-blue);   color: #fff; }
-    .action-btn--yellow { background: var(--accent);        color: #000; }
-
-    /* ── SEO TIPS ── */
-    .tips-card {
-      background: var(--bg-card);
-      border: 1px solid var(--border);
-      border-radius: var(--radius);
-      overflow: hidden;
-    }
-
-    .tips-toggle {
-      width: 100%;
-      background: none;
-      border: none;
-      cursor: pointer;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      padding: 18px 20px;
-      color: var(--text);
-      -webkit-tap-highlight-color: transparent;
-    }
-
-    .tips-toggle-left {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      font-size: 0.9375rem;
-      font-weight: 700;
-    }
-
-    .tips-chevron {
-      color: var(--text-muted);
-      transition: transform var(--tr);
-      flex-shrink: 0;
-    }
-
-    .tips-toggle[aria-expanded="true"] .tips-chevron {
-      transform: rotate(180deg);
-    }
-
-    .tips-body {
-      display: none;
-      padding: 0 20px 20px;
-    }
-
-    .tips-body.open { display: block; }
-
-    .tips-intro {
-      font-size: 0.875rem;
-      color: var(--text);
-      line-height: 1.6;
-      margin-bottom: 14px;
-    }
-
-    .tips-lede {
-      font-size: 0.875rem;
-      color: var(--text-muted);
-      line-height: 1.65;
-      margin-bottom: 18px;
-    }
-
-    .tips-sublabel {
-      font-size: 0.75rem;
-      font-weight: 700;
-      text-transform: uppercase;
-      letter-spacing: 0.07em;
-      color: var(--accent);
-      margin-bottom: 10px;
-    }
-
-    .coach-list {
-      list-style: none;
-      display: flex;
-      flex-direction: column;
-      gap: 10px;
-    }
-
-    .coach-list li {
-      display: flex;
-      align-items: flex-start;
-      gap: 10px;
-      font-size: 0.875rem;
-      color: var(--text-muted);
-      line-height: 1.55;
-    }
-
-    .coach-list li svg {
-      color: var(--accent-green);
-      flex-shrink: 0;
-      margin-top: 3px;
-    }
-
-    .coach-list li strong { color: var(--text); }
-
-    /* ── BOTTOM NAV ── */
-    .bottom-nav {
-      position: fixed;
-      bottom: 0;
-      left: 50%;
-      transform: translateX(-50%);
-      width: 100%;
-      max-width: 480px;
-      background: var(--bg-card);
-      border-top: 1px solid var(--border);
-      display: flex;
-      padding-bottom: var(--safe-bot);
-      z-index: 100;
-    }
-
-    .nav-btn {
-      flex: 1;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      gap: 4px;
-      padding: 12px 0;
-      background: none;
-      border: none;
-      cursor: pointer;
-      color: var(--text-muted);
-      font-size: 0.625rem;
-      font-weight: 700;
-      text-transform: uppercase;
-      letter-spacing: 0.07em;
-      transition: color var(--tr);
-      -webkit-tap-highlight-color: transparent;
-    }
-
-    .nav-btn.active { color: var(--accent); }
-    .nav-btn svg    { width: 22px; height: 22px; }
-
-    /* ── QR MODAL ── */
-    .modal {
-      position: fixed;
-      inset: 0;
-      z-index: 200;
-      display: flex;
-      align-items: flex-end;
-      justify-content: center;
-      opacity: 0;
-      pointer-events: none;
-      transition: opacity 0.2s ease;
-    }
-
-    .modal.open {
-      opacity: 1;
-      pointer-events: all;
-    }
-
-    .modal-backdrop {
-      position: absolute;
-      inset: 0;
-      background: rgba(0,0,0,0.72);
-      backdrop-filter: blur(4px);
-      -webkit-backdrop-filter: blur(4px);
-    }
-
-    .modal-sheet {
-      position: relative;
-      background: var(--bg-card);
-      border-radius: 20px 20px 0 0;
-      padding: 20px 28px calc(28px + var(--safe-bot));
-      width: 100%;
-      max-width: 480px;
-      text-align: center;
-      transform: translateY(100%);
-      transition: transform 0.3s cubic-bezier(0.32,0.72,0,1);
-    }
-
-    .modal.open .modal-sheet { transform: translateY(0); }
-
-    .modal-handle {
-      width: 36px;
-      height: 4px;
-      background: var(--border);
-      border-radius: 2px;
-      margin: 0 auto 22px;
-    }
-
-    .modal-sheet h2 { font-size: 1.125rem; font-weight: 700; margin-bottom: 6px; }
-
-    .modal-sheet p {
-      font-size: 0.875rem;
-      color: var(--text-muted);
-      margin-bottom: 24px;
-    }
-
-    #qr-canvas {
-      border-radius: 12px;
-      max-width: 220px;
-      width: 100%;
-    }
-
-    .modal-close {
-      display: block;
-      margin: 20px auto 0;
-      background: transparent;
-      color: var(--text-muted);
-      border: 1px solid var(--border);
-      border-radius: 8px;
-      padding: 11px 28px;
-      font-size: 0.9375rem;
-      font-weight: 600;
-      cursor: pointer;
-    }
-  
-    /* ---------- Login ---------- */
-    #login-screen{position:fixed;inset:0;z-index:200;display:flex;align-items:center;
-      justify-content:center;padding:1.5rem;background:var(--bg)}
-    #login-screen[hidden]{display:none}
-    .login-card{width:100%;max-width:22rem;background:var(--bg-card);
-      border:1px solid var(--border);border-radius:var(--radius);padding:1.75rem}
-    .login-logo{height:28px;display:block;margin:0 auto .5rem}
-    .login-sub{text-align:center;color:var(--text-muted);font-size:.875rem;margin:0 0 1.5rem}
-    .login-error{color:#ff6b6b;font-size:.8125rem;min-height:1.2em;margin:.25rem 0 .75rem}
-
-    /* ---------- Customers ---------- */
-    .opt{color:var(--text-muted);font-weight:400;font-size:.75rem}
-    .cust-list{display:flex;flex-direction:column;gap:.625rem;margin-top:1.25rem}
-    .cust-empty{color:var(--text-muted);font-size:.875rem;text-align:center;padding:1.5rem 0}
-    .cust-card{background:var(--bg-card);border:1px solid var(--border);
-      border-radius:var(--radius);padding:.875rem 1rem}
-    .cust-top{display:flex;align-items:center;justify-content:space-between;gap:.75rem}
-    .cust-top strong{font-size:.9375rem}
-    .cust-call{flex-shrink:0;font-size:.8125rem;font-weight:600;color:var(--accent-green);
-      text-decoration:none;padding:.25rem .625rem;border:1px solid var(--border);border-radius:999px}
-    .cust-line{color:var(--text-muted);font-size:.8125rem;margin:.25rem 0 0}
-    .cust-note{color:var(--text-muted);font-size:.8125rem;margin:.5rem 0 0;
-      padding-top:.5rem;border-top:1px solid var(--border)}
-</style>
+  <link rel="stylesheet" href="/assets/app.css">
 </head>
 
 <body>
-<script type="module">
-  // Supabase client. No bundler here, so it comes straight from the CDN.
-  import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
-  window.sb = createClient(window.SUPABASE_URL, window.SUPABASE_ANON_KEY);
-  window.dispatchEvent(new Event('sb-ready'));
-</script>
+
 
 <!-- LOGIN. Shown until someone signs in; #app stays hidden behind it. -->
 <div id="login-screen">
@@ -745,6 +215,27 @@
 
     </section>
 
+    <section id="tab-chat" class="tab-pane" role="tabpanel">
+      <div class="pane-head">
+        <h1>Messages</h1>
+        <p id="chat-sub">Talk to the VisiScale team. Replies appear here live.</p>
+      </div>
+
+      <div class="field" id="chat-picker-wrap" hidden>
+        <label for="chat-business">Conversation</label>
+        <select id="chat-business" onchange="openThread(this.value)"></select>
+      </div>
+
+      <div id="chat-thread" class="chat-thread">
+        <p class="cust-empty">Loading...</p>
+      </div>
+
+      <form class="chat-composer" onsubmit="sendMessage(event)">
+        <input id="chat-input" type="text" placeholder="Write a message" autocomplete="off" maxlength="2000">
+        <button class="btn-primary chat-send" type="submit" id="chat-send">Send</button>
+      </form>
+    </section>
+
   </div>
 
   <!-- Bottom nav -->
@@ -761,6 +252,12 @@
         <path d="M3 9h18M9 21V9"/>
       </svg>
       Post Job
+    </button>
+    <button class="nav-btn" onclick="switchTab('chat', this)" aria-selected="false">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/>
+      </svg>
+      Messages
     </button>
     <button class="nav-btn" onclick="switchTab('reviews', this)" aria-selected="false">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
@@ -785,14 +282,22 @@
 </div>
 
 <script>
+  // Client app. The agency dashboard sets this true.
+  window.IS_ADMIN_APP = false;
+</script>
+<script type="module" src="/assets/app.js"></script>
+<script>
 // ============================================================
 // CONFIG — duplicate this file and update these values per client
 // ============================================================
 // Paste these two from Supabase: Project Settings > API.
 // Both are safe in client code. The anon key is public by design and Row Level
 // Security is what protects the data. Never put the service_role key here.
-window.SUPABASE_URL      = 'REPLACE_ME';
-window.SUPABASE_ANON_KEY = 'REPLACE_ME';
+// Publishable key. Safe in the browser by design: it grants nothing on its
+// own, and RLS is what actually protects the data. Never put a key labelled
+// sb_secret_ or service_role in here.
+window.SUPABASE_URL      = 'https://wjshwwivzpazczayuexc.supabase.co';
+window.SUPABASE_ANON_KEY = 'sb_publishable_IiAkCfE_bNoYNqz6aVZcbA_qOnZoPVn';
 
 const CONFIG = {
   n8nFormUrl:   'https://n8n.visiscale.com/webhook/742422d7-5e6c-4f81-b511-50c00fa7070f',
@@ -809,19 +314,7 @@ document.getElementById('sms-btn').href   = 'sms:?&body='     + encodeURICompone
 document.getElementById('email-btn').href = 'mailto:?subject=' + encodeURIComponent(CONFIG.emailSubject)
                                           + '&body='           + encodeURIComponent(CONFIG.emailBody);
 
-// ============================================================
-// TAB SWITCHING
-// ============================================================
-function switchTab(id, btn) {
-  document.querySelectorAll('.tab-pane').forEach(el => el.classList.remove('active'));
-  document.querySelectorAll('.nav-btn').forEach(el => {
-    el.classList.remove('active');
-    el.setAttribute('aria-selected', 'false');
-  });
-  document.getElementById('tab-' + id).classList.add('active');
-  btn.classList.add('active');
-  btn.setAttribute('aria-selected', 'true');
-}
+
 
 // ============================================================
 // PHOTO PREVIEW
@@ -922,43 +415,11 @@ document.addEventListener('keydown', e => { if (e.key === 'Escape') closeQR(); }
 // ============================================================
 let currentBusinessId = null;
 
-async function signIn() {
-  const btn = document.getElementById('login-btn');
-  const err = document.getElementById('login-error');
-  err.textContent = '';
-  btn.disabled = true; btn.textContent = 'Signing in...';
-  const { error } = await sb.auth.signInWithPassword({
-    email:    document.getElementById('login-email').value.trim(),
-    password: document.getElementById('login-password').value,
-  });
-  if (error) {
-    err.textContent = 'That email and password did not match. Try again.';
-    btn.disabled = false; btn.textContent = 'Sign In';
-    return;
-  }
-  await showApp();
-}
 
-async function signOut() {
-  await sb.auth.signOut();
-  location.reload();
-}
 
-async function showApp() {
-  // Which business this user belongs to. Every read and write is scoped to it,
-  // and RLS enforces that server-side regardless of what the app sends.
-  const { data: profile } = await sb.from('profiles').select('business_id, full_name').single();
-  if (!profile) {
-    document.getElementById('login-error').textContent =
-      'That login is not linked to a business yet. Run the add-a-client script.';
-    await sb.auth.signOut();
-    return;
-  }
-  currentBusinessId = profile.business_id;
-  document.getElementById('login-screen').hidden = true;
-  document.getElementById('app').hidden = false;
-  loadCustomers();
-}
+
+
+
 
 // ============================================================
 // CUSTOMERS
@@ -1009,17 +470,36 @@ async function addCustomer() {
   loadCustomers();
 }
 
-// Customer names are user input rendered into HTML, so escape them.
-function esc(str) {
-  return String(str).replace(/[&<>"']/g, ch =>
-    ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[ch]));
-}
+// ---- Messages ----
+//
+// A client has exactly one thread, their own. An admin sees every business and
+// picks between them. RLS enforces both server-side: the picker is a
+// convenience, not the security boundary.
+let chatState = { businessId: null, userId: null, isAdmin: false, channel: null };
+
+
+
+
+
+
+
+
+
+
+
+
 
 // Skip the login screen if the session is still valid.
 window.addEventListener('sb-ready', async () => {
   const { data } = await sb.auth.getSession();
   if (data.session) showApp();
 });
+
+// Called by showApp once a session and profile are confirmed.
+async function onSignedIn(profile, userId) {
+  loadCustomers();
+  initChat(profile, userId);
+}
 </script>
 </body>
 </html>
