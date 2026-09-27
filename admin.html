@@ -90,6 +90,34 @@
 
     </section>
 
+    <section id="tab-onboarding" class="tab-pane" role="tabpanel">
+
+      <div id="onb-list-view">
+        <div class="pane-head">
+          <h1>Onboarding</h1>
+          <p>Directory progress per client. Pick one to work through the list.</p>
+        </div>
+        <div id="onb-clients" class="convo-list"><p class="cust-empty">Loading...</p></div>
+      </div>
+
+      <div id="onb-detail-view" hidden>
+        <div class="thread-head">
+          <button class="thread-back" onclick="closeOnboarding()" aria-label="Back to all clients">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
+          </button>
+          <h1 id="onb-title">Directories</h1>
+        </div>
+
+        <div class="onb-progress">
+          <div class="onb-bar"><span id="onb-bar-fill"></span></div>
+          <p id="onb-count" class="onb-count"></p>
+        </div>
+
+        <div id="onb-rows"><p class="cust-empty">Loading...</p></div>
+      </div>
+
+    </section>
+
   </div>
 
   <nav class="bottom-nav" aria-label="Main navigation">
@@ -104,6 +132,12 @@
         <path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/>
       </svg>
       Messages
+    </button>
+    <button class="nav-btn" onclick="switchTab('onboarding', this)" aria-selected="false">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M9 11l3 3 8-8"/><path d="M20 12v7a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h9"/>
+      </svg>
+      Onboarding
     </button>
   </nav>
 
@@ -231,11 +265,166 @@ function watchAllThreads() {
     .subscribe();
 }
 
+// ============================================================
+// ONBOARDING — directory checklist
+// ============================================================
+const STATUSES = ['todo', 'waiting', 'live', 'skipped'];
+const STATUS_LABEL = { todo: 'To do', waiting: 'Waiting', live: 'Live', skipped: 'Skipped' };
+const CATEGORY_LABEL = {
+  core:   'Core listings',
+  review: 'Review platforms',
+  trade:  'Trade specific',
+  local:  'Local',
+};
+
+let onbBusinessId = null;
+let onbDirectories = [];
+let onbProgress = new Map();
+
+// Client picker for the onboarding tab. Same shape as the conversation list so
+// the two tabs do not feel like different products.
+async function loadOnboardingClients() {
+  const wrap = document.getElementById('onb-clients');
+  const [biz, prog] = await Promise.all([
+    sb.from('businesses').select('id, name').order('name'),
+    sb.from('client_directories').select('business_id, status'),
+  ]);
+  if (biz.error) { wrap.innerHTML = '<p class="cust-empty">Could not load clients.</p>'; return; }
+  if (!biz.data.length) { wrap.innerHTML = '<p class="cust-empty">No clients yet.</p>'; return; }
+
+  const { count: total } = await sb.from('directories').select('*', { count: 'exact', head: true });
+
+  const done = new Map();
+  for (const r of prog.data || []) {
+    if (r.status === 'live') done.set(r.business_id, (done.get(r.business_id) || 0) + 1);
+  }
+
+  wrap.innerHTML = biz.data.map(b => {
+    const n = done.get(b.id) || 0;
+    return `
+    <button class="convo" onclick="openOnboarding('${esc(b.id)}')">
+      <span class="convo-body">
+        <span class="convo-top">
+          <span class="convo-name">${esc(b.name)}</span>
+          <span class="convo-time">${n} / ${total || 0}</span>
+        </span>
+        <span class="convo-preview">${n === total && total ? 'All directories live' : 'Directory listings'}</span>
+      </span>
+    </button>`; }).join('');
+}
+
+async function openOnboarding(businessId) {
+  onbBusinessId = businessId;
+  const wrap = document.getElementById('onb-rows');
+  document.getElementById('onb-list-view').hidden = true;
+  document.getElementById('onb-detail-view').hidden = false;
+  wrap.innerHTML = '<p class="cust-empty">Loading...</p>';
+
+  const [{ data: biz }, dirs, prog] = await Promise.all([
+    sb.from('businesses').select('name').eq('id', businessId).single(),
+    sb.from('directories').select('*').order('sort_order'),
+    sb.from('client_directories').select('*').eq('business_id', businessId),
+  ]);
+
+  document.getElementById('onb-title').textContent = biz ? biz.name : 'Directories';
+  if (dirs.error) { wrap.innerHTML = '<p class="cust-empty">Could not load directories.</p>'; return; }
+
+  onbDirectories = dirs.data || [];
+  onbProgress = new Map((prog.data || []).map(r => [r.directory_id, r]));
+  renderOnboarding();
+}
+
+function renderOnboarding() {
+  const wrap = document.getElementById('onb-rows');
+  const groups = new Map();
+  for (const d of onbDirectories) {
+    if (!groups.has(d.category)) groups.set(d.category, []);
+    groups.get(d.category).push(d);
+  }
+
+  wrap.innerHTML = [...groups.entries()].map(([cat, items]) => `
+    <h2 class="onb-group">${esc(CATEGORY_LABEL[cat] || cat)}</h2>
+    <div class="onb-rows">${items.map(onbRow).join('')}</div>
+  `).join('');
+
+  const live = onbDirectories.filter(d => (onbProgress.get(d.id) || {}).status === 'live').length;
+  const total = onbDirectories.length;
+  document.getElementById('onb-count').textContent = `${live} of ${total} live`;
+  document.getElementById('onb-bar-fill').style.width = total ? `${(live / total) * 100}%` : '0%';
+}
+
+function onbRow(d) {
+  const row = onbProgress.get(d.id) || { status: 'todo', notes: '' };
+  const flags = [
+    d.needs_phone_verification ? '<span class="onb-flag" title="Verification code arrives by phone">Phone verify</span>' : '',
+    d.needs_client_action      ? '<span class="onb-flag onb-flag-client" title="Cannot be finished without the client">Needs client</span>' : '',
+    d.can_hide_address         ? '<span class="onb-flag" title="Business address can be hidden on this listing">Can hide address</span>' : '',
+  ].join('');
+
+  return `
+  <div class="onb-row onb-${esc(row.status)}">
+    <div class="onb-main">
+      <div class="onb-name">
+        ${d.url ? `<a href="${esc(d.url)}" target="_blank" rel="noopener">${esc(d.name)}</a>` : esc(d.name)}
+      </div>
+      ${flags ? `<div class="onb-flags">${flags}</div>` : ''}
+      ${d.notes ? `<p class="onb-note">${esc(d.notes)}</p>` : ''}
+      ${row.notes ? `<p class="onb-note onb-note-mine">${esc(row.notes)}</p>` : ''}
+    </div>
+    <div class="onb-actions">
+      <select class="onb-status" onchange="setDirStatus('${esc(d.id)}', this.value)"
+              aria-label="Status for ${esc(d.name)}">
+        ${STATUSES.map(st => `<option value="${st}"${st === row.status ? ' selected' : ''}>${STATUS_LABEL[st]}</option>`).join('')}
+      </select>
+      <button class="onb-note-btn" onclick="editDirNote('${esc(d.id)}')" aria-label="Note for ${esc(d.name)}">Note</button>
+    </div>
+  </div>`;
+}
+
+async function setDirStatus(directoryId, status) {
+  const existing = onbProgress.get(directoryId) || {};
+  const row = {
+    business_id:  onbBusinessId,
+    directory_id: directoryId,
+    status,
+    notes: existing.notes || null,
+  };
+  onbProgress.set(directoryId, row);
+  renderOnboarding();                    // move the bar now, not after the round trip
+  const { error } = await sb.from('client_directories')
+    .upsert(row, { onConflict: 'business_id,directory_id' });
+  if (error) alert('Could not save that. Try again.');
+}
+
+async function editDirNote(directoryId) {
+  const existing = onbProgress.get(directoryId) || { status: 'todo' };
+  const notes = prompt('Note for this listing', existing.notes || '');
+  if (notes === null) return;
+  const row = {
+    business_id:  onbBusinessId,
+    directory_id: directoryId,
+    status:       existing.status || 'todo',
+    notes:        notes.trim() || null,
+  };
+  onbProgress.set(directoryId, row);
+  renderOnboarding();
+  const { error } = await sb.from('client_directories')
+    .upsert(row, { onConflict: 'business_id,directory_id' });
+  if (error) alert('Could not save that note. Try again.');
+}
+
+function closeOnboarding() {
+  document.getElementById('onb-detail-view').hidden = true;
+  document.getElementById('onb-list-view').hidden = false;
+  loadOnboardingClients();
+}
+
 async function onSignedIn(profile, userId) {
   loadClients();
   initChat(profile, userId);
   await loadConversations();
   watchAllThreads();
+  loadOnboardingClients();
 }
 </script>
 
